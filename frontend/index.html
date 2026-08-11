@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log In — Code Review Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+
+ 
+
+  <!-- Firebase SDK — order matters, keep exactly this sequence -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+  <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  </button>
+
+  <div class="card">
+    <h1 class="panel-title">LOG IN</h1>
+
+    <form class="form" id="login-form" novalidate>
+
+      <!-- Error / Success banners -->
+      <div class="toast toast-error" id="login-alert" role="alert" aria-live="polite">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span id="login-alert-msg"></span>
+      </div>
+      <div class="toast toast-success" id="login-success" role="status" aria-live="polite">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        <span id="login-success-msg"></span>
+      </div>
+
+      <!-- Email Field -->
+      <div class="field">
+        <label for="login-email">Email</label>
+        <div class="input-wrap">
+          <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <span class="field-error" id="login-email-err">Please enter a valid email address.</span>
+      </div>
+
+      <!-- Password Field -->
+      <div class="field">
+        <label for="login-password">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="login-password" placeholder="Your password"
+            class="has-eye" autocomplete="current-password" />
+          <button type="button" class="eye-btn" onclick="togglePwd('login-password', this)"
+            aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+        <span class="field-error" id="login-pass-err">Password must be at least 6 characters.</span>
+      </div>
+
+      <button type="submit" class="btn-primary" id="login-btn">LOG IN</button>
+    </form>
+
+    <p class="switch-link">
+      Don't have an account?
+      <a href="signup.html">Sign Up</a>
+    </p>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/auth-login.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code Review Agent</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/agent-chat.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ── Auto Quiz panel (ported from AdaptLearn's subject-chat) ── */
+    .sc-panel-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      background: var(--color-surface-offset, #f3f4f6);
+      color: var(--color-text-muted, #6b7280);
+    }
+
+    .sc-quiz-question {
+      margin-bottom: 12px;
+    }
+
+    .sc-quiz-q-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--color-text, #111827);
+      margin: 0;
+    }
+
+    .sc-quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .sc-quiz-options.hidden,
+    .sc-quiz-result.hidden {
+      display: none;
+    }
+
+    .sc-quiz-opt {
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border, #e5e7eb);
+      background: transparent;
+      color: var(--color-text, #111827);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .sc-quiz-opt:hover:not(:disabled) {
+      background: var(--color-surface-offset, #f3f4f6);
+    }
+
+    .sc-quiz-opt:disabled {
+      cursor: default;
+    }
+
+    .sc-quiz-opt.correct {
+      background: #d1fae5 !important;
+      border-color: #10b981 !important;
+      color: #065f46 !important;
+    }
+
+    .sc-quiz-opt.wrong {
+      background: #fee2e2 !important;
+      border-color: #ef4444 !important;
+      color: #991b1b !important;
+    }
+
+    .sc-quiz-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sc-quiz-counter {
+      font-size: 0.78rem;
+      color: var(--color-text-muted, #6b7280);
+    }
+
+    .sc-quiz-start-btn {
+      background: #111827;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .sc-quiz-start-btn:hover {
+      opacity: 0.9;
+    }
+
+    .sc-quiz-result {
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .sc-quiz-result-score {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-text, #111827);
+    }
+
+    .sc-quiz-result-msg {
+      font-size: 0.85rem;
+      color: var(--color-text-muted, #6b7280);
+      margin: 4px 0 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+<div class="app-shell">
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </span>
+      <span class="sidebar-brand">Code Review</span>
+      <button id="sidebarToggle" class="sidebar-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">MAIN</div>
+      <a href="dashboard.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="agent-chat.html" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        <span class="nav-label">Code Review Agent</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="profile.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">Profile</span>
+      </a>
+      <button id="logoutBtn" class="nav-item nav-item--btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <a href="dashboard.html" class="back-btn" aria-label="Back to dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </a>
+        <span class="topbar-title">Code Review Agent</span>
+      </div>
+      <div class="topbar-actions">
+        <button data-theme-toggle class="icon-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <!-- Unified Single Card Layout -->
+    <div class="sc-layout">
+
+      <!-- Left Side: Chat Section -->
+      <div class="sc-chat-col">
+
+        <div class="sc-subject-header">
+          <div class="sc-subject-icon" style="background:#eff6ff; color:#3b82f6;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </div>
+          <div>
+            <p class="sc-subject-title">Code Review Agent</p>
+            <p class="sc-subject-sub">Paste your code and get an expert AI review</p>
+          </div>
+        </div>
+
+        <div id="chatWindow" class="sc-chat-window">
+          <div id="welcomeMsg" class="sc-msg sc-msg--ai sc-welcome-animate">
+            <div class="sc-msg-avatar sc-msg-avatar--ai">AI</div>
+            <div class="sc-msg-bubble">
+              👋 Hi! I'm your <strong>Code Review Agent</strong>. Paste any code snippet and I'll
+              review it for <strong>security vulnerabilities</strong>, <strong>performance issues</strong>,
+              and <strong>best practices</strong>. Let's get started! 🔐
+            </div>
+          </div>
+        </div>
+
+        <div class="sc-suggestions">
+          <button class="sc-suggestion-chip">Review my code</button>
+          <button class="sc-suggestion-chip">Find security issues</button>
+          <button class="sc-suggestion-chip">Check performance</button>
+          <button class="sc-suggestion-chip">Best practices</button>
+        </div>
+
+        <div class="sc-input-bar">
+          <textarea
+            id="chatInput"
+            class="sc-textarea"
+            placeholder="Paste your code or ask a question…"
+            rows="1"
+          ></textarea>
+
+          <button id="sendBtn" class="sc-send-btn" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+
+          <button id="stopBtn" class="sc-stop-btn" aria-label="Stop generation" style="display:none !important;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="4" y="4" width="16" height="16" rx="2"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Side: Auto Quiz + Session Stats Panel -->
+      <div class="sc-right-col sc-panel-animate">
+
+        <!-- Auto Quiz Card (generated from code review content) -->
+        <div class="sc-panel">
+          <div class="sc-panel-header">
+            <div class="sc-panel-header-left">
+              <div class="sc-panel-icon" style="background:#fef3c7; color:#f59e0b;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <span class="sc-panel-title">Auto Quiz</span>
+            </div>
+            <span class="sc-panel-badge" id="quizBadge">From Review</span>
+          </div>
+
+          <div class="sc-quiz-body" id="quizBody">
+
+            <div class="sc-quiz-question" id="quizQuestion">
+              <p class="sc-quiz-q-text" id="quizQText">Submit code for review — a quiz will be generated from the review feedback.</p>
+            </div>
+
+            <!-- Options hidden until quiz starts -->
+            <div class="sc-quiz-options hidden" id="quizOptions">
+              <button class="sc-quiz-opt" id="opt0"></button>
+              <button class="sc-quiz-opt" id="opt1"></button>
+              <button class="sc-quiz-opt" id="opt2"></button>
+              <button class="sc-quiz-opt" id="opt3"></button>
+            </div>
+
+            <!-- Quiz footer -->
+            <div class="sc-quiz-footer">
+              <span class="sc-quiz-counter" id="quizCounter"></span>
+              <button class="sc-quiz-start-btn" id="quizStartBtn">Start Quiz</button>
+            </div>
+
+            <!-- Quiz result hidden until done -->
+            <div class="sc-quiz-result hidden" id="quizResult">
+              <div class="sc-quiz-result-score" id="quizScore">0 / 5</div>
+              <div class="sc-quiz-result-msg" id="quizMsg">Good try!</div>
+              <button class="sc-quiz-start-btn" id="quizRestartBtn">Try Again</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Session Stats -->
+        <div class="sc-panel">
+          <div class="sc-panel-header">
+            <div class="sc-panel-header-left">
+              <div class="sc-panel-icon" style="background:#eff6ff; color:#3b82f6;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </div>
+              <span class="sc-panel-title">Session Stats</span>
+            </div>
+          </div>
+
+          <div class="sc-progress-body">
+
+            <div class="sc-progress-item">
+              <div class="sc-progress-label-row">
+                <span class="sc-progress-label">Total Cyber Assessments conducted</span>
+                <span class="sc-progress-val" id="progressQAsked">20</span>
+              </div>
+              <div class="sc-progress-track">
+                <div class="sc-progress-fill" id="fillQAsked" style="width:100%; background:#3b82f6;"></div>
+              </div>
+            </div>
+
+            <div class="sc-progress-item">
+              <div class="sc-progress-label-row">
+                <span class="sc-progress-label">Quiz Count</span>
+                <span class="sc-progress-val" id="progressQuizCount">0</span>
+              </div>
+              <div class="sc-progress-track">
+                <div class="sc-progress-fill" id="fillQuizCount" style="width:0%; background:#a855f7;"></div>
+              </div>
+            </div>
+
+            <div class="sc-progress-item">
+              <div class="sc-progress-label-row">
+                <span class="sc-progress-label">Issues Found</span>
+                <span class="sc-progress-val" id="progressQAttempts">27</span>
+              </div>
+              <div class="sc-progress-track">
+                <div class="sc-progress-fill" id="fillQAttempts" style="width:100%; background:#ef4444;"></div>
+              </div>
+            </div>
+
+            <div class="sc-progress-item">
+              <div class="sc-progress-label-row">
+                <span class="sc-progress-label">Session Time</span>
+                <span class="sc-progress-val" id="progressTime">0 min</span>
+              </div>
+              <div class="sc-progress-track">
+                <div class="sc-progress-fill" id="fillTime" style="width:0%; background:#10b981;"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/agent-chat.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+name: Ollama Code Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install & Start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          # Wait until Ollama daemon responds
+          until curl -s http://localhost:11434/api/tags > /dev/null; do
+            echo "Waiting for Ollama service to start..."
+            sleep 2
+          done
+          echo "✅ Ollama is ready!"
+
+      - name: Pull Model
+        run: |
+          # Use lightweight, fast coding models for standard GitHub runners
+          ollama pull qwen2.5-coder:1.5b
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Review Agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_FULL_NAME: ${{ github.repository }}
+          OLLAMA_HOST: "http://localhost:11434"
+          OLLAMA_MODEL: "qwen2.5-coder:1.5b"
+        run: |
+          python backend/github_reviewer.py
