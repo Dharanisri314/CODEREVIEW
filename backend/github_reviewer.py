@@ -119,14 +119,23 @@ def post_pr_comment(comment_body: str) -> None:
 def format_analysis_result(result) -> str:
     """Convert static-analysis output into readable text."""
     if isinstance(result, dict):
-        lines = []
-
-        for key, value in result.items():
-            lines.append(f"**{key}:** {value}")
-
-        return "\n".join(lines)
+        return "\n".join(
+            f"**{key}:** {value}"
+            for key, value in result.items()
+        )
 
     return str(result)
+
+
+def has_code_additions(diff: str) -> bool:
+    """Return True if the diff contains non-empty added lines."""
+    added_lines = [
+        line
+        for line in diff.splitlines()
+        if line.startswith("+") and not line.startswith("+++")
+    ]
+
+    return any(line[1:].strip() for line in added_lines)
 
 
 def main() -> None:
@@ -137,8 +146,27 @@ def main() -> None:
 
     diff = fetch_pr_diff()
 
+    # Check for an empty diff
     if not diff.strip():
         print("ℹ️ Diff is empty. Skipping review.")
+
+        post_pr_comment(
+            "ℹ️ **AI Code Review Skipped:** "
+            "The pull request contains no code changes."
+        )
+        return
+
+    # Check whether the diff contains actual code additions
+    if not has_code_additions(diff):
+        print(
+            "ℹ️ Diff contains no code additions or meaningful changes. "
+            "Skipping LLM review."
+        )
+
+        post_pr_comment(
+            "ℹ️ **AI Code Review Skipped:** "
+            "Only empty files or blank lines were added."
+        )
         return
 
     # Step 1: Run static analysis
@@ -149,14 +177,18 @@ def main() -> None:
             diff,
             language="python",
         )
-        static_analysis_text = format_analysis_result(static_analysis)
+
+        static_analysis_text = format_analysis_result(
+            static_analysis
+        )
+
     except Exception as exc:
         print(f"⚠️ Static analysis error: {exc}")
         static_analysis_text = (
             "Static analysis encountered an error and was skipped."
         )
 
-    # Limit the diff size to avoid exceeding the model context window
+    # Limit diff size to avoid exceeding the model context window
     diff_for_review = diff[:10000]
 
     # Step 2: Query Ollama
