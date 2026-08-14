@@ -14,6 +14,4 @@ conn.executescript("""
     DROP TABLE IF EXISTS feedbacks;
     DROP TABLE IF EXISTS elements;
     DROP TABLE IF EXISTS steps;
-    DROP TABLE IF EXISTS threads;
-    DROP TABLE IF EXISTS users;
 """)
