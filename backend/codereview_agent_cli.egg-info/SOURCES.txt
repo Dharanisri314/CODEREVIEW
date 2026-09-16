@@ -1,0 +1,8 @@
+codereview_cli.py
+setup.py
+codereview_agent_cli.egg-info/PKG-INFO
+codereview_agent_cli.egg-info/SOURCES.txt
+codereview_agent_cli.egg-info/dependency_links.txt
+codereview_agent_cli.egg-info/entry_points.txt
+codereview_agent_cli.egg-info/requires.txt
+codereview_agent_cli.egg-info/top_level.txt

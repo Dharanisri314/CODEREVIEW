@@ -3,3 +3,6 @@ ollama
 pydantic
 python-dotenv
 semgrep
+mem0ai
+qdrant-client
+rich>=13.0.0
